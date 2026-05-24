@@ -6,15 +6,35 @@ def generate_quiz(topic: str, level: str):
     prompt = f"""
     You are an expert educational quiz creator.
 
-    Generate 5 multiple choice questions for:
+    Generate exactly 5 multiple choice questions.
 
     Topic: {topic}
     Difficulty Level: {level}
 
-    Rules:
-    - Each question must have 4 options
+    Requirements:
+    - Each question must have 4 options:
+    A, B, C, D
     - Clearly mention the correct answer
+    - Add a short explanation after each answer
     - Keep questions beginner friendly
+    - Format cleanly using markdown
+
+    Example format:
+
+    ## Question 1
+    What is Python?
+
+    A. Database
+    B. Programming Language
+    C. Browser
+    D. Hardware
+
+    Correct Answer: B
+
+    Explanation:
+    Python is a programming language.
+
+    Repeat this structure for all questions.
     """
 
     response = client.chat.completions.create(

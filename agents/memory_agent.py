@@ -1,26 +1,44 @@
-import json
+from memory.chroma_store import (
+    save_to_memory,
+    get_learning_history,
+    search_similar_topics
+)
 
 
-MEMORY_FILE = "memory/student_memory.json"
+def remember_learning_session(student_id: str, topic: str, level: str):
+    result = save_to_memory(student_id, topic, level)
+    return result
 
 
-def save_to_memory(topic, level):
+def recall_learning_history(student_id: str):
+    history = get_learning_history(student_id)
 
-    with open(MEMORY_FILE, "r") as file:
-        data = json.load(file)
+    metadatas = history.get("metadatas", [])
 
-    data["history"].append({
-        "topic": topic,
-        "level": level
-    })
+    clean_history = []
 
-    with open(MEMORY_FILE, "w") as file:
-        json.dump(data, file, indent=4)
+    for item in metadatas:
+        clean_history.append({
+            "topic": item.get("topic"),
+            "level": item.get("level"),
+            "timestamp": item.get("timestamp")
+        })
+
+    return clean_history
 
 
-def get_learning_history():
+def recall_similar_learning(query: str, student_id: str):
+    similar_topics = search_similar_topics(query, student_id)
 
-    with open(MEMORY_FILE, "r") as file:
-        data = json.load(file)
+    metadatas = similar_topics.get("metadatas", [[]])[0]
 
-    return data["history"]
+    clean_similar = []
+
+    for item in metadatas:
+        clean_similar.append({
+            "topic": item.get("topic"),
+            "level": item.get("level"),
+            "timestamp": item.get("timestamp")
+        })
+
+    return clean_similar
