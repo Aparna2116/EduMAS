@@ -1,0 +1,1 @@
+from agents.curriculum_agent import generate_curriculum

@@ -6,6 +6,7 @@ from agents.curriculum_agent import generate_curriculum
 from agents.quiz_agent import generate_quiz
 from agents.memory_agent import remember_learning_session
 from agents.student_agent import save_session
+from agents.adaptive_agent import determine_next_level
 
 
 class EduMASState(TypedDict):
@@ -16,10 +17,25 @@ class EduMASState(TypedDict):
 
     lesson: str
     quiz: str
+    answer_key: dict
 
     memory_result: dict
     session_result: dict
 
+    adaptive_result: dict
+
+
+def adaptive_node(state: EduMASState):
+
+    adaptive_result = determine_next_level(
+        state["student_id"],
+        state["level"]
+    )
+
+    state["adaptive_result"] = adaptive_result
+    state["level"] = adaptive_result["recommended_level"]
+
+    return state
 
 def curriculum_node(state: EduMASState):
 
@@ -35,12 +51,13 @@ def curriculum_node(state: EduMASState):
 
 def quiz_node(state: EduMASState):
 
-    quiz = generate_quiz(
-        state["topic"],
-        state["level"]
-    )
+    quiz_result = generate_quiz(
+    state["topic"],
+    state["level"]
+)
 
-    state["quiz"] = quiz
+    state["quiz"] = quiz_result["student_quiz"]
+    state["answer_key"] = quiz_result["answer_key"]
 
     return state
 
@@ -74,6 +91,11 @@ def session_node(state: EduMASState):
 graph = StateGraph(EduMASState)
 
 graph.add_node(
+    "adaptive_agent",
+    adaptive_node
+)
+
+graph.add_node(
     "curriculum_agent",
     curriculum_node
 )
@@ -93,7 +115,7 @@ graph.add_node(
     session_node
 )
 
-graph.set_entry_point("curriculum_agent")
+graph.set_entry_point("adaptive_agent")
 
 graph.add_edge(
     "curriculum_agent",
@@ -113,6 +135,11 @@ graph.add_edge(
 graph.add_edge(
     "student_agent",
     END
+)
+
+graph.add_edge(
+    "adaptive_agent",
+    "curriculum_agent"
 )
 
 workflow = graph.compile()

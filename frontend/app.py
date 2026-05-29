@@ -3,138 +3,99 @@ import requests
 
 API_URL = "http://127.0.0.1:8000"
 
-st.set_page_config(
-    page_title="EduMAS",
-    page_icon="🎓",
-    layout="wide"
-)
+st.set_page_config(page_title="EduMAS", page_icon="🎓", layout="wide")
 
 st.title("🎓 EduMAS")
-st.subheader("AI-Powered Multi-Agent Learning System")
+st.subheader("Adaptive Multi-Agent Learning System")
 
-st.markdown("---")
+if "lesson_data" not in st.session_state:
+    st.session_state.lesson_data = None
 
-student_id = st.text_input(
-    "Student ID",
-    value="aparna"
-)
+student_id = st.text_input("Student ID", value="aparna")
 
 topic = st.text_input(
-    "Enter a topic to learn"
+    "Enter Topic",
+    placeholder="Example: Python loops"
 )
 
 level = st.selectbox(
-    "Select difficulty level",
+    "Select Level",
     ["beginner", "intermediate", "advanced"]
 )
 
 if st.button("Generate Lesson"):
-
-    if topic.strip() == "":
-        st.warning("Please enter a topic.")
+    if not topic:
+        st.warning("Please enter a topic first.")
     else:
-
-        payload = {
-            "topic": topic,
-            "level": level,
-            "student_id": student_id
-        }
-
-        with st.spinner("Generating lesson..."):
-
+        with st.spinner("AI Agents are working..."):
             response = requests.post(
                 f"{API_URL}/lesson",
-                json=payload
+                json={
+                    "topic": topic,
+                    "level": level
+                }
             )
 
         if response.status_code == 200:
-
-            data = response.json()
-
-            st.success("Lesson generated successfully!")
-
-            st.markdown("## 📘 Lesson")
-            st.markdown(data["lesson"])
-
-            st.markdown("---")
-            st.markdown("## 📝 Quiz")
-            st.markdown(data["quiz"])
-
-            st.markdown("### 🧠 Memory Status")
-            st.json(data.get("memory", {}))
-
-            st.markdown("### 🗂️ Session Status")
-            st.json(data.get("session", {}))
-
+            st.session_state.lesson_data = response.json()
+            st.session_state.current_topic = topic
+            st.success("Lesson Generated Successfully")
         else:
-            st.error("Failed to generate lesson.")
+            st.error(response.text)
 
+data = st.session_state.lesson_data
 
-st.markdown("---")
-st.markdown("## 📚 Learning History")
+if data:
 
-if st.button("Load Learning History"):
+    st.markdown("## Adaptive Result")
+    st.json(data["adaptive_result"])
 
-    history_response = requests.get(
-        f"{API_URL}/history/{student_id}"
-    )
+    st.markdown("## Lesson")
+    st.markdown(data["lesson"])
 
-    if history_response.status_code == 200:
+    st.markdown("## Quiz")
+    st.markdown(data["quiz"])
 
-        history_data = history_response.json()
-        history = history_data.get("learning_history", [])
+    st.markdown("## Submit Answers")
 
-        if len(history) == 0:
-            st.info("No learning history found.")
-        else:
-            for item in history:
-                st.write(
-                    f"📌 {item['topic']} — {item['level']} — {item['timestamp']}"
-                )
+    q1 = st.selectbox("Question 1", ["A", "B", "C", "D"], key="q1")
+    q2 = st.selectbox("Question 2", ["A", "B", "C", "D"], key="q2")
+    q3 = st.selectbox("Question 3", ["A", "B", "C", "D"], key="q3")
+    q4 = st.selectbox("Question 4", ["A", "B", "C", "D"], key="q4")
+    q5 = st.selectbox("Question 5", ["A", "B", "C", "D"], key="q5")
 
-    else:
-        st.error("Failed to load learning history.")
-
-st.markdown("---")
-st.markdown("## 🔍 Similar Topics Search")
-
-search_query = st.text_input(
-    "Search related topics"
-)
-
-if st.button("Find Similar Topics"):
-
-    if search_query.strip() == "":
-        st.warning("Please enter a search query.")
-
-    else:
-
-        similar_response = requests.get(
-            f"{API_URL}/similar/{student_id}",
-            params={"query": search_query}
+    if st.button("Submit Quiz"):
+        score_response = requests.post(
+            f"{API_URL}/score",
+            json={
+                "student_id": student_id,
+                "topic": st.session_state.current_topic,
+                "correct_answers": data["answer_key"],
+                "student_answers": {
+                    "q1": q1,
+                    "q2": q2,
+                    "q3": q3,
+                    "q4": q4,
+                    "q5": q5
+                }
+            }
         )
 
-        if similar_response.status_code == 200:
+        if score_response.status_code == 200:
+            score_data = score_response.json()
 
-            similar_data = similar_response.json()
+            st.markdown("## Quiz Result")
+            st.json(score_data["score_result"])
 
-            similar_topics = similar_data.get(
-                "similar_topics",
-                []
-            )
+            st.markdown("## Answer Key Used by System")
+            st.json(data["answer_key"])
 
-            if len(similar_topics) == 0:
-                st.info("No similar topics found.")
-
-            else:
-
-                st.success("Similar topics found!")
-
-                for item in similar_topics:
-
-                    st.write(
-                        f"📘 {item['topic']} — {item['level']}"
-                    )
-
+            st.success("Score saved to SQLite")
         else:
-            st.error("Failed to search similar topics.")
+            st.error(score_response.text)
+
+    st.markdown("## Memory Result")
+    st.json(data["memory_result"])
+
+    st.markdown("## Session Result")
+    st.json(data["session_result"])
